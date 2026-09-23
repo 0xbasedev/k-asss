@@ -28,6 +28,14 @@ FREQ_COLORS = [
 
 def _load_bm2(filename):
     path = SPRITE_DIR / filename
+    if not path.exists():
+        raise FileNotFoundError(
+            f"Sprite file not found: {path}\n"
+            f"Download sprites from https://subspace.gamespec.org/files/misc/ssbmp.zip\n"
+            f"and extract to {SPRITE_DIR}/\n"
+            f"  curl -LO https://subspace.gamespec.org/files/misc/ssbmp.zip\n"
+            f"  unzip ssbmp.zip -d {SPRITE_DIR}/"
+        )
     img = Image.open(str(path))
     return img
 

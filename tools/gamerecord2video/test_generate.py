@@ -62,8 +62,25 @@ def generate_test_recording(output_path):
     # Chat
     events = write_event(events, 50, 6, make_chat(-1, 0, 0, "Game starting!"))
 
+    # Scripted kills and chats at specific ticks
+    scripted = {
+        1000: [("kill", 0, 4, 15, 0)],
+        1500: [("chat", 0, 2, 0, "Got em!")],
+        2000: [("kill", 3, 1, 20, 1)],
+        2500: [("kill", 5, 2, 10, 0)],
+    }
+
     # Position updates - make players fly around in interesting patterns
     for tick in range(0, duration, 10):
+        # Insert scripted events at correct timestamps
+        for st in sorted(scripted.keys()):
+            if tick <= st < tick + 10:
+                for ev in scripted[st]:
+                    if ev[0] == "kill":
+                        events = write_event(events, st, 5, make_kill(ev[1], ev[2], ev[3], ev[4]))
+                    elif ev[0] == "chat":
+                        events = write_event(events, st, 6, make_chat(ev[1], ev[2], ev[3], ev[4]))
+
         for pid in range(6):
             t = tick / 100.0
             if pid < 3:
@@ -89,12 +106,6 @@ def generate_test_recording(output_path):
 
             events = write_event(events, tick, 7,
                                  make_pos(pid, rotation, x, y, xspeed, yspeed, pid * 5, 900, weapon, wlevel))
-
-    # Some kills
-    events = write_event(events, 1000, 5, make_kill(0, 4, 15, 0))
-    events = write_event(events, 1500, 6, make_chat(0, 2, 0, "Got em!"))
-    events = write_event(events, 2000, 5, make_kill(3, 1, 20, 1))
-    events = write_event(events, 2500, 5, make_kill(5, 2, 10, 0))
 
     # Compress events
     compressed = zlib.compress(bytes(events), 9)

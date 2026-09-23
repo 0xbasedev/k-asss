@@ -137,9 +137,17 @@ def parse_weapons(data):
     )
 
 
+def _is_valid_name(data):
+    try:
+        s = data.split(b"\x00")[0].decode("ascii")
+        return all(32 <= ord(c) < 127 for c in s) if s else True
+    except (UnicodeDecodeError, ValueError):
+        return False
+
+
 def parse_header(f) -> FileHeader:
-    raw = f.read(120)
-    if len(raw) < 120:
+    raw = f.read(128)
+    if len(raw) < 88:
         raise ValueError(f"File too short for header: {len(raw)} bytes")
 
     magic = raw[:8].rstrip(b"\x00").decode("ascii", errors="replace")
@@ -147,13 +155,30 @@ def parse_header(f) -> FileHeader:
         raise ValueError(f"Bad magic: {magic!r}")
 
     version, offset, events, endtime, maxpid, specfreq = struct.unpack_from("<6I", raw, 8)
-    recorded = struct.unpack_from("<I", raw, 32)[0]
-    mapchecksum = struct.unpack_from("<I", raw, 36)[0]
-    recorder = raw[40:64].split(b"\x00")[0].decode("ascii", errors="replace")
-    arenaname = raw[64:88].split(b"\x00")[0].decode("ascii", errors="replace")
 
     if version != 2:
         raise ValueError(f"Unsupported version: {version}")
+
+    # Detect 32-bit vs 64-bit time_t layout.
+    # With #pragma pack(1): 32-bit time_t gives sizeof(header)=88,
+    # 64-bit gives sizeof(header)=92. The offset field equals
+    # sizeof(header) + optional comments length.
+    # Try 32-bit first, validate by checking if recorder/arenaname are ASCII.
+    if _is_valid_name(raw[40:64]) and _is_valid_name(raw[64:88]):
+        recorded = struct.unpack_from("<I", raw, 32)[0]
+        mapchecksum = struct.unpack_from("<I", raw, 36)[0]
+        recorder = raw[40:64].split(b"\x00")[0].decode("ascii", errors="replace")
+        arenaname = raw[64:88].split(b"\x00")[0].decode("ascii", errors="replace")
+    elif _is_valid_name(raw[44:68]) and _is_valid_name(raw[68:92]):
+        recorded = struct.unpack_from("<Q", raw, 32)[0]
+        mapchecksum = struct.unpack_from("<I", raw, 40)[0]
+        recorder = raw[44:68].split(b"\x00")[0].decode("ascii", errors="replace")
+        arenaname = raw[68:92].split(b"\x00")[0].decode("ascii", errors="replace")
+    else:
+        recorded = struct.unpack_from("<I", raw, 32)[0]
+        mapchecksum = struct.unpack_from("<I", raw, 36)[0]
+        recorder = raw[40:64].split(b"\x00")[0].decode("ascii", errors="replace")
+        arenaname = raw[64:88].split(b"\x00")[0].decode("ascii", errors="replace")
 
     return FileHeader(
         magic=magic, version=version, offset=offset,

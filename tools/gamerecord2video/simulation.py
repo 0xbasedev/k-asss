@@ -122,6 +122,8 @@ class GameSimulation:
         elif isinstance(ev, EventPosition):
             p = self.players.get(ev.pid)
             if p:
+                if not p.alive:
+                    p.alive = True
                 p.prev_x = p.x
                 p.prev_y = p.y
                 p.prev_rotation = p.rotation
@@ -192,7 +194,8 @@ class GameSimulation:
         return x, y, p.rotation
 
     def get_active_players(self):
-        return {pid: p for pid, p in self.players.items() if p.ship != SHIP_SPEC}
+        return {pid: p for pid, p in self.players.items()
+                if p.ship != SHIP_SPEC and p.alive}
 
     def get_active_explosions(self, tick):
         return [e for e in self.explosions
