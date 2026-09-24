@@ -1,0 +1,7 @@
+assets/sprites/
+assets/sounds/
+assets/*.zip
+*.game
+*.mp4
+__pycache__/
+*.pyc
