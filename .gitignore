@@ -12,3 +12,4 @@ windeps
 .vagrant
 .idea/
 lib/
+.vite/
